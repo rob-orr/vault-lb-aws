@@ -17,8 +17,8 @@ Checkout [examples](./examples) for fully functioning examples.
 - `vpc_id`: [Required] VPC ID to provision LB in.
 - `cidr_blocks`: [Optional] CIDR blocks to provision LB across.
 - `subnet_ids`: [Optional] Subnet ID(s) to provision LB across.
-- `is_internal_lb`: [Optional] Is an internal load balancer, defaults to true.
-- `use_lb_cert`: [Optional] Use certificate passed in for the LB IAM listener, "lb_cert" and "lb_private_key" must be passed in if true, defaults to false.
+- `lb_internal`: [Optional] Is an internal load balancer, defaults to true.
+- `lb_use_cert`: [Optional] Use certificate passed in for the LB IAM listener, "lb_cert" and "lb_private_key" must be passed in if true, defaults to false.
 - `lb_cert`: [Optional] Certificate for LB IAM server certificate.
 - `lb_private_key`: [Optional] Private key for LB IAM server certificate.
 - `lb_cert_chain`: [Optional] Certificate chain for LB IAM server certificate.
@@ -31,10 +31,16 @@ Checkout [examples](./examples) for fully functioning examples.
 
 ## Outputs
 
-- `vault_lb_sg_id`: Vault load balancer security group ID.
-- `vault_tg_http_8200_arn`: Vault load balancer HTTP 8200 target group.
-- `vault_tg_https_8200_arn`: Vault load balancer HTTPS 8200 target group.
-- `vault_lb_dns`: Vault load balancer DNS name.
+- `vault_app_lb_sg_id`: Vault application load balancer security group ID.
+- `vault_lb_arn`: Vault application load balancer ARN.
+- `vault_app_lb_dns`: Vault load balancer DNS name.
+- `vault_network_lb_dns`: Vault load balancer DNS name.
+- `vault_tg_tcp_22_arn`: Vault network load balancer TCP 22 target group.
+- `vault_tg_tcp_8200_arn`: Vault network load balancer TCP 8200 target group.
+- `vault_tg_http_8200_arn`: Vault application load balancer HTTP 8200 target group.
+- `vault_tg_https_8200_arn`: Vault application load balancer HTTPS 8200 target group.
+- `vault_tg_http_3030_arn`: Vault application load balancer HTTP 3030 target group.
+- `vault_tg_https_3030_arn`: Vault application load balancer HTTPS 3030 target group.
 
 ## Module Dependencies
 

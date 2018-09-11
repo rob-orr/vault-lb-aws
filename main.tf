@@ -9,31 +9,7 @@ resource "aws_security_group" "vault_lb" {
   description = "Security group for Vault ${var.name} LB"
   vpc_id      = "${var.vpc_id}"
   tags        = "${merge(var.tags, map("Name", format("%s-vault-lb", var.name)))}"
-  description = "Vault lb ports"
-}
-
-resource "aws_security_group_rule" "vault_lb_http_80" {
-  count = "${var.create ? 1 : 0}"
-
-  security_group_id = "${aws_security_group.vault_lb.id}"
-  type              = "ingress"
-  protocol          = "tcp"
-  from_port         = 80
-  to_port           = 80
-  cidr_blocks       = ["${var.cidr_blocks}"]
-  description       = "Vault lb HTTP:80 port"
-}
-
-resource "aws_security_group_rule" "vault_lb_https_443" {
-  count = "${var.create && var.use_lb_cert ? 1 : 0}"
-
-  security_group_id = "${aws_security_group.vault_lb.id}"
-  type              = "ingress"
-  protocol          = "tcp"
-  from_port         = 443
-  to_port           = 443
-  cidr_blocks       = ["${var.cidr_blocks}"]
-  description       = "Vault lb HTTPS:443 port"
+  description = "Vault LB ports"
 }
 
 resource "aws_security_group_rule" "vault_lb_tcp_8200" {
@@ -45,7 +21,43 @@ resource "aws_security_group_rule" "vault_lb_tcp_8200" {
   from_port         = 8200
   to_port           = 8200
   cidr_blocks       = ["${var.cidr_blocks}"]
-  description       = "Vault lb TCP:8200 port"
+  description       = "Vault LB TCP:8200 port"
+}
+
+resource "aws_security_group_rule" "vault_lb_http_80" {
+  count = "${var.create ? 1 : 0}"
+
+  security_group_id = "${aws_security_group.vault_lb.id}"
+  type              = "ingress"
+  protocol          = "tcp"
+  from_port         = 80
+  to_port           = 80
+  cidr_blocks       = ["${var.cidr_blocks}"]
+  description       = "Vault LB HTTP:80 port"
+}
+
+resource "aws_security_group_rule" "vault_lb_https_443" {
+  count = "${var.create && var.lb_use_cert ? 1 : 0}"
+
+  security_group_id = "${aws_security_group.vault_lb.id}"
+  type              = "ingress"
+  protocol          = "tcp"
+  from_port         = 443
+  to_port           = 443
+  cidr_blocks       = ["${var.cidr_blocks}"]
+  description       = "Vault LB HTTPS:443 port"
+}
+
+resource "aws_security_group_rule" "vault_lb_tcp_3030" {
+  count = "${var.create ? 1 : 0}"
+
+  security_group_id = "${aws_security_group.vault_lb.id}"
+  type              = "ingress"
+  protocol          = "tcp"
+  from_port         = 3030
+  to_port           = 3030
+  cidr_blocks       = ["${var.cidr_blocks}"]
+  description       = "Wetty LB TCP:3030 port"
 }
 
 resource "aws_security_group_rule" "outbound_tcp" {
@@ -57,7 +69,7 @@ resource "aws_security_group_rule" "outbound_tcp" {
   from_port         = 0
   to_port           = 65535
   cidr_blocks       = ["0.0.0.0/0"]
-  description       = "Vault lb outbound TCP ports"
+  description       = "Vault LB outbound TCP ports"
 }
 
 resource "random_id" "vault_lb_access_logs" {
@@ -114,7 +126,7 @@ resource "aws_lb" "vault" {
   count = "${var.create ? 1 : 0}"
 
   name            = "${random_id.vault_lb.hex}"
-  internal        = "${var.is_internal_lb}"
+  internal        = "${var.lb_internal}"
   subnets         = ["${var.subnet_ids}"]
   security_groups = ["${aws_security_group.vault_lb.id}"]
   tags            = "${merge(var.tags, map("Name", format("%s-vault-lb", var.name)))}"
@@ -127,14 +139,14 @@ resource "aws_lb" "vault" {
 }
 
 resource "random_id" "vault_http_8200" {
-  count = "${var.create && !var.use_lb_cert ? 1 : 0}"
+  count = "${var.create && !var.lb_use_cert ? 1 : 0}"
 
   byte_length = 4
   prefix      = "vault-http-8200-"
 }
 
 resource "aws_lb_target_group" "vault_http_8200" {
-  count = "${var.create && !var.use_lb_cert ? 1 : 0}"
+  count = "${var.create && !var.lb_use_cert ? 1 : 0}"
 
   name     = "${random_id.vault_http_8200.hex}"
   vpc_id   = "${var.vpc_id}"
@@ -156,7 +168,7 @@ resource "aws_lb_target_group" "vault_http_8200" {
 }
 
 resource "aws_lb_listener" "vault_80" {
-  count = "${var.create && !var.use_lb_cert ? 1 : 0}"
+  count = "${var.create && !var.lb_use_cert ? 1 : 0}"
 
   load_balancer_arn = "${aws_lb.vault.arn}"
   port              = "80"
@@ -168,8 +180,50 @@ resource "aws_lb_listener" "vault_80" {
   }
 }
 
+resource "random_id" "vault_http_3030" {
+  count = "${var.create && !var.lb_use_cert ? 1 : 0}"
+
+  byte_length = 4
+  prefix      = "vault-http-3030-"
+}
+
+resource "aws_lb_target_group" "vault_http_3030" {
+  count = "${var.create && !var.lb_use_cert ? 1 : 0}"
+
+  name     = "${random_id.vault_http_3030.hex}"
+  vpc_id   = "${var.vpc_id}"
+  port     = 3030
+  protocol = "HTTP"
+  tags     = "${merge(var.tags, map("Name", format("%s-vault-http-3030", var.name)))}"
+
+  health_check {
+    interval = 15
+    timeout  = 5
+    protocol = "HTTP"
+    port     = "traffic-port"
+    path     = "/"
+    matcher  = "200"
+
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+  }
+}
+
+resource "aws_lb_listener" "vault_http_3030" {
+  count = "${var.create && !var.lb_use_cert ? 1 : 0}"
+
+  load_balancer_arn = "${aws_lb.vault.arn}"
+  port              = "3030"
+  protocol          = "HTTP"
+
+  default_action {
+    target_group_arn = "${aws_lb_target_group.vault_http_3030.arn}"
+    type             = "forward"
+  }
+}
+
 resource "aws_iam_server_certificate" "vault" {
-  count = "${var.create && var.use_lb_cert ? 1 : 0}"
+  count = "${var.create && var.lb_use_cert ? 1 : 0}"
 
   name              = "${random_id.vault_lb.hex}"
   certificate_body  = "${var.lb_cert}"
@@ -179,14 +233,14 @@ resource "aws_iam_server_certificate" "vault" {
 }
 
 resource "random_id" "vault_https_8200" {
-  count = "${var.create && var.use_lb_cert ? 1 : 0}"
+  count = "${var.create && var.lb_use_cert ? 1 : 0}"
 
   byte_length = 4
   prefix      = "vault-https-8200-"
 }
 
 resource "aws_lb_target_group" "vault_https_8200" {
-  count = "${var.create && var.use_lb_cert ? 1 : 0}"
+  count = "${var.create && var.lb_use_cert ? 1 : 0}"
 
   name     = "${random_id.vault_https_8200.hex}"
   vpc_id   = "${var.vpc_id}"
@@ -207,8 +261,23 @@ resource "aws_lb_target_group" "vault_https_8200" {
   }
 }
 
+resource "aws_lb_listener" "vault_8200" {
+  count = "${var.create ? 1 : 0}"
+
+  load_balancer_arn = "${aws_lb.vault.arn}"
+  port              = "8200"
+  protocol          = "${var.lb_use_cert ? "HTTPS" : "HTTP"}"
+  ssl_policy        = "${var.lb_use_cert ? var.lb_ssl_policy : ""}"
+  certificate_arn   = "${var.lb_use_cert ? element(concat(aws_iam_server_certificate.vault.*.arn, list("")), 0) : ""}" # TODO: Workaround for issue #11210
+
+  default_action {
+    target_group_arn = "${var.lb_use_cert ? element(concat(aws_lb_target_group.vault_https_8200.*.arn, list("")), 0) : element(concat(aws_lb_target_group.vault_http_8200.*.arn, list("")), 0)}" # TODO: Workaround for issue #11210
+    type             = "forward"
+  }
+}
+
 resource "aws_lb_listener" "vault_443" {
-  count = "${var.create && var.use_lb_cert ? 1 : 0}"
+  count = "${var.create && var.lb_use_cert ? 1 : 0}"
 
   load_balancer_arn = "${aws_lb.vault.arn}"
   port              = "443"
@@ -222,17 +291,46 @@ resource "aws_lb_listener" "vault_443" {
   }
 }
 
-resource "aws_lb_listener" "vault_8200" {
-  count = "${var.create ? 1 : 0}"
+resource "random_id" "vault_https_3030" {
+  count = "${var.create && var.lb_use_cert ? 1 : 0}"
+
+  byte_length = 4
+  prefix      = "vault-https-3030-"
+}
+
+resource "aws_lb_target_group" "vault_https_3030" {
+  count = "${var.create && var.lb_use_cert ? 1 : 0}"
+
+  name     = "${random_id.vault_https_3030.hex}"
+  vpc_id   = "${var.vpc_id}"
+  port     = 3030
+  protocol = "HTTPS"
+  tags     = "${merge(var.tags, map("Name", format("%s-vault-https-3030", var.name)))}"
+
+  health_check {
+    interval = 15
+    timeout  = 5
+    protocol = "HTTPS"
+    port     = "traffic-port"
+    path     = "/"
+    matcher  = "200"
+
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+  }
+}
+
+resource "aws_lb_listener" "vault_https_3030" {
+  count = "${var.create && var.lb_use_cert ? 1 : 0}"
 
   load_balancer_arn = "${aws_lb.vault.arn}"
-  port              = "8200"
-  protocol          = "${var.use_lb_cert ? "HTTPS" : "HTTP"}"
-  ssl_policy        = "${var.use_lb_cert ? var.lb_ssl_policy : ""}"
-  certificate_arn   = "${var.use_lb_cert ? element(concat(aws_iam_server_certificate.vault.*.arn, list("")), 0) : ""}" # TODO: Workaround for issue #11210
+  port              = "3030"
+  protocol          = "HTTPS"
+  ssl_policy        = "${var.lb_ssl_policy}"
+  certificate_arn   = "${aws_iam_server_certificate.vault.arn}"
 
   default_action {
-    target_group_arn = "${var.use_lb_cert ? element(concat(aws_lb_target_group.vault_https_8200.*.arn, list("")), 0) : element(concat(aws_lb_target_group.vault_http_8200.*.arn, list("")), 0)}" # TODO: Workaround for issue #11210
+    target_group_arn = "${aws_lb_target_group.vault_https_3030.arn}"
     type             = "forward"
   }
 }
