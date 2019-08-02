@@ -15,6 +15,7 @@ variable "vpc_id" {
 variable "cidr_blocks" {
   description = "CIDR blocks to provision LB across."
   type        = "list"
+  default     = ["0.0.0.0/0"]
 }
 
 variable "subnet_ids" {
