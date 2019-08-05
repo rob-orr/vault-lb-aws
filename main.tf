@@ -217,17 +217,17 @@ resource "aws_lb_listener" "vault_443" {
   }
 }
 
-resource "aws_lb_listener" "vault_8200" {
-  count = "${var.create ? 1 : 0}"
+// resource "aws_lb_listener" "vault_8200" {
+//   count = "${var.create ? 1 : 0}"
 
-  load_balancer_arn = "${aws_lb.vault.arn}"
-  port              = "8200"
-  protocol          = "${var.use_lb_cert ? "HTTPS" : "HTTP"}"
-  ssl_policy        = "${var.use_lb_cert ? var.lb_ssl_policy : ""}"
-  certificate_arn   = "${var.use_lb_cert ? element(concat(aws_iam_server_certificate.vault.*.arn, list("")), 0) : ""}" # TODO: Workaround for issue #11210
+//   load_balancer_arn = "${aws_lb.vault.arn}"
+//   port              = "8200"
+//   protocol          = "${var.use_lb_cert ? "HTTPS" : "HTTP"}"
+//   ssl_policy        = "${var.use_lb_cert ? var.lb_ssl_policy : ""}"
+//   certificate_arn   = "${var.use_lb_cert ? element(concat(aws_iam_server_certificate.vault.*.arn, list("")), 0) : ""}" # TODO: Workaround for issue #11210
 
-  default_action {
-    target_group_arn = "${var.use_lb_cert ? element(concat(aws_lb_target_group.vault_https_8200.*.arn, list("")), 0) : element(concat(aws_lb_target_group.vault_http_8200.*.arn, list("")), 0)}" # TODO: Workaround for issue #11210
-    type             = "forward"
-  }
-}
+//   default_action {
+//     target_group_arn = "${var.use_lb_cert ? element(concat(aws_lb_target_group.vault_https_8200.*.arn, list("")), 0) : element(concat(aws_lb_target_group.vault_http_8200.*.arn, list("")), 0)}" # TODO: Workaround for issue #11210
+//     type             = "forward"
+//   }
+// }
