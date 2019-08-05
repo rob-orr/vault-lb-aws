@@ -33,16 +33,16 @@ resource "aws_security_group_rule" "vault_lb_https_443" {
   cidr_blocks       = ["${split(",", join(",", var.cidr_blocks))}"]
 }
 
-resource "aws_security_group_rule" "vault_lb_tcp_8200" {
-  count = "${var.create ? 1 : 0}"
+// resource "aws_security_group_rule" "vault_lb_tcp_8200" {
+//   count = "${var.create ? 1 : 0}"
 
-  security_group_id = "${aws_security_group.vault_lb.id}"
-  type              = "ingress"
-  protocol          = "tcp"
-  from_port         = 8200
-  to_port           = 8200
-  cidr_blocks       = ["${split(",", join(",", var.cidr_blocks))}"]
-}
+//   security_group_id = "${aws_security_group.vault_lb.id}"
+//   type              = "ingress"
+//   protocol          = "tcp"
+//   from_port         = 8200
+//   to_port           = 8200
+//   cidr_blocks       = ["${split(",", join(",", var.cidr_blocks))}"]
+// }
 
 resource "aws_security_group_rule" "outbound_tcp" {
   count = "${var.create ? 1 : 0}"
